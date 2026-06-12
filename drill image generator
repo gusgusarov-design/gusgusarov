@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drill Image Generator</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  background: #0f0f0d;
+  color: #f0ece0;
+  min-height: 100vh;
+  padding: 32px 24px;
+}
+
+.dot-bg {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: radial-gradient(circle at 1px 1px, #2a2920 1px, transparent 0);
+  background-size: 24px 24px; opacity: 0.5;
+}
+
+.container { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; }
+
+/* Header */
+.header { margin-bottom: 32px; }
+.eyebrow {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.18em;
+  text-transform: uppercase; color: #C4A96A; margin-bottom: 8px;
+}
+.title {
+  font-size: 28px; font-weight: 900; font-style: italic;
+  color: #f0ece0; letter-spacing: -0.02em; line-height: 1.1;
+}
+.subtitle { font-size: 13px; color: #6a6860; margin-top: 6px; }
+
+/* API Key section */
+.api-section {
+  background: #1a1a16; border: 0.5px solid #2a2920;
+  border-radius: 12px; padding: 20px; margin-bottom: 20px;
+}
+.api-label { font-size: 11px; font-weight: 600; color: #C4A96A; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 8px; display: block; }
+.api-input-row { display: flex; gap: 10px; }
+.api-input {
+  flex: 1; background: #0f0f0d; border: 0.5px solid #2e2d26;
+  border-radius: 8px; padding: 10px 14px; color: #f0ece0;
+  font-size: 13px; outline: none; font-family: 'SF Mono', monospace;
+}
+.api-input:focus { border-color: #C4A96A; }
+.api-hint { font-size: 11px; color: #5a5850; margin-top: 8px; }
+.api-hint a { color: #C4A96A; text-decoration: none; }
+
+/* Style presets */
+.presets-label { font-size: 11px; font-weight: 600; color: #C4A96A; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 10px; display: block; }
+.presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.preset-btn {
+  background: #1a1a16; border: 0.5px solid #2e2d26;
+  border-radius: 6px; padding: 7px 14px; color: #a09880;
+  font-size: 12px; cursor: pointer; transition: all 0.15s;
+  font-family: inherit;
+}
+.preset-btn:hover { border-color: #C4A96A; color: #f0ece0; }
+.preset-btn.active { background: #C4A96A; border-color: #C4A96A; color: #1a1810; font-weight: 600; }
+
+/* Main prompt area */
+.prompt-section {
+  background: #1a1a16; border: 0.5px solid #2a2920;
+  border-radius: 12px; padding: 20px; margin-bottom: 16px;
+}
+.prompt-textarea {
+  width: 100%; background: #0f0f0d; border: 0.5px solid #2e2d26;
+  border-radius: 8px; padding: 14px; color: #f0ece0;
+  font-size: 13px; line-height: 1.6; resize: vertical; min-height: 120px;
+  outline: none; font-family: inherit;
+}
+.prompt-textarea:focus { border-color: #C4A96A; }
+.prompt-textarea::placeholder { color: #3a3830; }
+
+.neg-label { font-size: 11px; font-weight: 600; color: #6a6860; text-transform: uppercase; letter-spacing: 0.12em; margin: 14px 0 8px; display: block; }
+.neg-input {
+  width: 100%; background: #0f0f0d; border: 0.5px solid #2e2d26;
+  border-radius: 8px; padding: 10px 14px; color: #8a8678;
+  font-size: 12px; outline: none; font-family: inherit;
+}
+.neg-input:focus { border-color: #4a4840; }
+
+/* Controls row */
+.controls { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; margin-bottom: 16px; align-items: end; }
+.ctrl-group label { font-size: 10px; font-weight: 600; color: #6a6860; text-transform: uppercase; letter-spacing: 0.12em; display: block; margin-bottom: 6px; }
+.ctrl-select {
+  width: 100%; background: #1a1a16; border: 0.5px solid #2e2d26;
+  border-radius: 8px; padding: 9px 12px; color: #f0ece0;
+  font-size: 12px; outline: none; cursor: pointer; font-family: inherit;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236a6860' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  padding-right: 28px;
+}
+.ctrl-select:focus { border-color: #C4A96A; }
+
+/* Generate button */
+.gen-btn {
+  background: #C4A96A; border: none; border-radius: 8px;
+  padding: 10px 24px; color: #1a1810; font-size: 13px; font-weight: 700;
+  cursor: pointer; transition: all 0.15s; font-family: inherit;
+  white-space: nowrap; height: 38px; align-self: end;
+}
+.gen-btn:hover { background: #d4b97a; }
+.gen-btn:active { transform: scale(0.98); }
+.gen-btn:disabled { background: #2a2920; color: #5a5850; cursor: not-allowed; transform: none; }
+
+/* AI Enhance button */
+.enhance-row { display: flex; gap: 10px; margin-bottom: 16px; }
+.enhance-btn {
+  flex: 1; background: transparent; border: 0.5px solid #2e2d26;
+  border-radius: 8px; padding: 9px 16px; color: #8a8678;
+  font-size: 12px; cursor: pointer; transition: all 0.15s; font-family: inherit;
+}
+.enhance-btn:hover { border-color: #C4A96A; color: #C4A96A; }
+
+/* Results grid */
+.results { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-top: 24px; }
+.result-card {
+  background: #1a1a16; border: 0.5px solid #2e2d26;
+  border-radius: 12px; overflow: hidden;
+}
+.result-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: #0f0f0d; }
+.result-img.portrait { aspect-ratio: 9/16; }
+.result-img.square { aspect-ratio: 1; }
+.result-footer { padding: 12px 14px; display: flex; gap: 8px; align-items: center; }
+.result-label { flex: 1; font-size: 11px; color: #6a6860; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-btn {
+  background: transparent; border: 0.5px solid #2e2d26;
+  border-radius: 6px; padding: 5px 10px; color: #C4A96A;
+  font-size: 11px; cursor: pointer; font-family: inherit;
+  transition: all 0.15s; text-decoration: none; display: inline-block;
+}
+.dl-btn:hover { background: #C4A96A; color: #1a1810; border-color: #C4A96A; }
+
+/* Prompt output */
+.prompt-output {
+  background: #0f0f0d; border: 0.5px solid #2a2920;
+  border-radius: 8px; padding: 14px; font-size: 12px;
+  color: #a09880; line-height: 1.6; font-family: 'SF Mono', monospace;
+  margin-top: 12px; display: none;
+}
+.prompt-output.visible { display: block; }
+
+/* Status */
+.status {
+  padding: 12px 16px; border-radius: 8px; font-size: 12px;
+  margin-bottom: 16px; display: none;
+}
+.status.loading { background: #1e1e16; border: 0.5px solid #2e2d26; color: #C4A96A; display: flex; align-items: center; gap: 10px; }
+.status.error { background: #1e1010; border: 0.5px solid #3e1818; color: #cc5540; display: block; }
+.status.success { background: #101e10; border: 0.5px solid #1e3e1e; color: #6aaa50; display: block; }
+
+.spinner {
+  width: 14px; height: 14px; border: 1.5px solid #2a2920;
+  border-top-color: #C4A96A; border-radius: 50%;
+  animation: spin 0.8s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* History toggle */
+.history-toggle {
+  font-size: 11px; color: #5a5850; cursor: pointer;
+  display: flex; align-items: center; gap: 6px; margin-top: 24px;
+  padding-top: 20px; border-top: 0.5px solid #1e1e18;
+}
+.history-toggle:hover { color: #a09880; }
+
+/* Midjourney export */
+.mj-section {
+  background: #1a1a16; border: 0.5px solid #2a2920;
+  border-radius: 12px; padding: 20px; margin-top: 20px;
+}
+.mj-title { font-size: 12px; font-weight: 600; color: #C4A96A; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 12px; }
+.mj-output {
+  background: #0f0f0d; border: 0.5px solid #2a2920;
+  border-radius: 8px; padding: 12px 14px; font-size: 12px;
+  color: #a09880; font-family: 'SF Mono', monospace; line-height: 1.6;
+  min-height: 60px;
+}
+.copy-btn {
+  margin-top: 10px; background: transparent; border: 0.5px solid #2e2d26;
+  border-radius: 6px; padding: 6px 14px; color: #a09880;
+  font-size: 11px; cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.copy-btn:hover { border-color: #C4A96A; color: #C4A96A; }
+.copy-btn.copied { color: #6aaa50; border-color: #6aaa50; }
+</style>
+</head>
+<body>
+
+<div class="dot-bg"></div>
+
+<div class="container">
+
+  <div class="header">
+    <div class="eyebrow">AI Visual Studio</div>
+    <div class="title">Drill Image Generator</div>
+    <div class="subtitle">Ideogram API · Midjourney Prompts · Brand-Aligned Visuals</div>
+  </div>
+
+  <!-- API Key -->
+  <div class="api-section">
+    <label class="api-label">Ideogram API Key</label>
+    <div class="api-input-row">
+      <input type="password" class="api-input" id="apiKey" placeholder="ideogram_api_sk_...">
+    </div>
+    <div class="api-hint">
+      Отримай ключ на <a href="https://ideogram.ai/manage-api" target="_blank">ideogram.ai/manage-api</a> — ~$0.02 за зображення. Ключ зберігається тільки в браузері.
+    </div>
+  </div>
+
+  <!-- Style presets -->
+  <span class="presets-label">Бренд / Стиль</span>
+  <div class="presets">
+    <button class="preset-btn active" data-preset="drill-tactical" onclick="setPreset(this)">Drill — Tactical</button>
+    <button class="preset-btn" data-preset="drill-abstract" onclick="setPreset(this)">Drill — Abstract</button>
+    <button class="preset-btn" data-preset="drill-background" onclick="setPreset(this)">Drill — BG Texture</button>
+    <button class="preset-btn" data-preset="forbes" onclick="setPreset(this)">Forbes Editorial</button>
+    <button class="preset-btn" data-preset="portrait" onclick="setPreset(this)">Portrait — Dark Studio</button>
+    <button class="preset-btn" data-preset="social" onclick="setPreset(this)">Social Media 9:16</button>
+    <button class="preset-btn" data-preset="custom" onclick="setPreset(this)">Custom</button>
+  </div>
+
+  <!-- Prompt input -->
+  <div class="prompt-section">
+    <textarea class="prompt-textarea" id="promptInput" placeholder="Опиши зображення... або вибери preset вище і відредагуй під свою задачу"></textarea>
+    <label class="neg-label">Negative Prompt (що виключити)</label>
+    <input type="text" class="neg-input" id="negPrompt" placeholder="bright colors, stock photo, cartoon, cheap lighting...">
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="ctrl-group">
+      <label>Aspect Ratio</label>
+      <select class="ctrl-select" id="aspectRatio">
+        <option value="ASPECT_16_9">16:9 — Slide / Wide</option>
+        <option value="ASPECT_9_16">9:16 — Social / Story</option>
+        <option value="ASPECT_1_1">1:1 — Square</option>
+        <option value="ASPECT_4_3">4:3 — Presentation</option>
+        <option value="ASPECT_2_3">2:3 — Portrait</option>
+        <option value="ASPECT_3_2">3:2 — Landscape</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <label>Style</label>
+      <select class="ctrl-select" id="styleType">
+        <option value="REALISTIC">Realistic (Photo)</option>
+        <option value="DESIGN">Design / Poster</option>
+        <option value="RENDER_3D">3D Render</option>
+        <option value="ILLUSTRATION">Illustration</option>
+        <option value="AUTO">Auto</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <label>Кількість</label>
+      <select class="ctrl-select" id="numImages">
+        <option value="1">1 зображення</option>
+        <option value="2">2 варіанти</option>
+        <option value="4">4 варіанти</option>
+      </select>
+    </div>
+    <button class="gen-btn" id="genBtn" onclick="generateImage()">Generate ↗</button>
+  </div>
+
+  <!-- Status -->
+  <div class="status" id="status"></div>
+
+  <!-- Results -->
+  <div class="results" id="results"></div>
+
+  <!-- Midjourney Export -->
+  <div class="mj-section" id="mjSection">
+    <div class="mj-title">Midjourney Prompt (copy & paste)</div>
+    <div class="mj-output" id="mjOutput">Вибери preset або напиши промпт — тут з'явиться версія для Midjourney з правильними параметрами.</div>
+    <button class="copy-btn" id="copyBtn" onclick="copyMJ()">Copy Prompt</button>
+  </div>
+
+</div>
+
+<script>
+const PRESETS = {
+  'drill-tactical': {
+    prompt: `Ukrainian special forces soldier reviewing tactical training content on smartphone, forward operating base, single LED task light, dramatic chiaroscuro lighting, documentary war photography, Canon R5 85mm f/1.4 shallow depth of field, warm amber highlights on tactical gear, dark earth tone color grade, gritty photorealism`,
+    neg: `bright colors, smile, stock photo, American soldier, cartoon, studio, civilian, cheerful`,
+    aspect: 'ASPECT_16_9',
+    style: 'REALISTIC',
+    mj: `Ukrainian special forces soldier reviewing tactical training on mobile device, forward operating base, single LED source, dramatic chiaroscuro, Canon R5 85mm f/1.4, shallow DOF, warm amber on tactical gear, earth tones, gritty documentary war photography --ar 16:9 --style raw --v 6.1 --q 2 --no bright, smile, stock photo, American, cartoon`
+  },
+  'drill-abstract': {
+    prompt: `Defense training data network visualization, dark tactical background, interconnected military module nodes, glowing amber and gold connection lines, particle system data flow, isometric perspective, ultra detailed 8k, premium dark tech brand visual`,
+    neg: `bright colors, consumer app, pastel, cartoon, people, text`,
+    aspect: 'ASPECT_16_9',
+    style: 'RENDER_3D',
+    mj: `Defense training data network, dark tactical background, interconnected military nodes glowing amber and gold, particle system data flow, isometric perspective, ultra detailed 8k, premium dark tech brand --ar 16:9 --v 6.1 --q 2 --no bright, consumer app, pastel, cartoon`
+  },
+  'drill-background': {
+    prompt: `Ultra dark near-black tactical texture background, very subtle dot matrix pattern, zero focal subject, perfect for text overlay, premium defense tech brand background, near-black with faint warm undertones, 4K texture quality`,
+    neg: `people, objects, gradients, bright, text, logos`,
+    aspect: 'ASPECT_16_9',
+    style: 'DESIGN',
+    mj: `Ultra dark tactical background texture, subtle crosshatch dot grid pattern, near-black #0f0f0d, very faint warm undertones, zero focal subject, negative space for text overlay, premium defense brand background --ar 16:9 --style raw --v 6.1 --no people, objects, gradients, bright`
+  },
+  'forbes': {
+    prompt: `Ukrainian technology entrepreneur, modern Kyiv office interior, floor-to-ceiling windows with city blur, afternoon natural window light, Canon 85mm f/1.2, editorial business photography, WSJ magazine style, warm neutral color grade, thoughtful confident expression`,
+    neg: `stock photo smile, corporate cliché, busy background, cheap lighting, Eastern European stock aesthetic`,
+    aspect: 'ASPECT_16_9',
+    style: 'REALISTIC',
+    mj: `Ukrainian tech entrepreneur, modern Kyiv office, floor-to-ceiling windows city blur, afternoon natural light, Canon 85mm f/1.2, editorial business photography, WSJ magazine style --ar 16:9 --style raw --v 6.1 --no stock photo, corporate cliché, busy background`
+  },
+  'portrait': {
+    prompt: `Professional portrait, neutral dark studio background, dramatic Rembrandt lighting, high contrast black and white with warm shadow tones, editorial portraiture, sharp eyes, authoritative composure, Platon photography style, Hasselblad quality`,
+    neg: `smile, stock photo, bright background, casual, cheap lighting, colorful`,
+    aspect: 'ASPECT_2_3',
+    style: 'REALISTIC',
+    mj: `Professional military officer portrait, neutral dark studio, Rembrandt lighting, high contrast, warm shadow tones, Platon portrait photography style, Hasselblad quality --ar 2:3 --style raw --v 6.1 --q 2 --no smile, stock, bright background`
+  },
+  'social': {
+    prompt: `Ukrainian serviceman with drone equipment at golden hour, dramatic backlit silhouette, warm amber sky, tactical field environment, cinematic vertical composition, defense technology documentation style, high contrast, premium social media visual`,
+    neg: `stock photo, bright colors, generic military, action movie cliché, text, logos`,
+    aspect: 'ASPECT_9_16',
+    style: 'REALISTIC',
+    mj: `Ukrainian serviceman drone equipment golden hour, dramatic backlit silhouette, amber sky, tactical field, cinematic vertical composition --ar 9:16 --style raw --v 6.1 --q 2 --no stock photo, bright colors, generic military`
+  },
+  'custom': {
+    prompt: ``,
+    neg: `stock photo, cartoon, cheap lighting, oversaturated`,
+    aspect: 'ASPECT_16_9',
+    style: 'REALISTIC',
+    mj: ``
+  }
+};
+
+let currentPreset = 'drill-tactical';
+
+function setPreset(btn) {
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentPreset = btn.dataset.preset;
+  const p = PRESETS[currentPreset];
+  document.getElementById('promptInput').value = p.prompt;
+  document.getElementById('negPrompt').value = p.neg;
+  document.getElementById('aspectRatio').value = p.aspect;
+  document.getElementById('styleType').value = p.style;
+  updateMJ();
+}
+
+function updateMJ() {
+  const p = PRESETS[currentPreset];
+  const prompt = document.getElementById('promptInput').value;
+  const neg = document.getElementById('negPrompt').value;
+  let mj = p.mj || prompt;
+  if (currentPreset === 'custom' && prompt) {
+    const ar = document.getElementById('aspectRatio').value.replace('ASPECT_','').replace('_',':').toLowerCase();
+    mj = `${prompt} --ar ${ar} --style raw --v 6.1 --q 2${neg ? ` --no ${neg}` : ''}`;
+  }
+  document.getElementById('mjOutput').textContent = mj || 'Введи промпт для генерації Midjourney версії.';
+}
+
+document.getElementById('promptInput').addEventListener('input', updateMJ);
+document.getElementById('negPrompt').addEventListener('input', updateMJ);
+document.getElementById('aspectRatio').addEventListener('change', updateMJ);
+
+function copyMJ() {
+  const text = document.getElementById('mjOutput').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = '✓ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy Prompt'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+async function generateImage() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) {
+    showStatus('error', 'Вкажи Ideogram API ключ вгорі.');
+    return;
+  }
+  const prompt = document.getElementById('promptInput').value.trim();
+  if (!prompt) {
+    showStatus('error', 'Введи промпт або вибери preset.');
+    return;
+  }
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  showStatus('loading', 'Генеруємо зображення... ~15-30 секунд');
+
+  const aspectRatio = document.getElementById('aspectRatio').value;
+  const styleType = document.getElementById('styleType').value;
+  const numImages = parseInt(document.getElementById('numImages').value);
+  const negPrompt = document.getElementById('negPrompt').value.trim();
+
+  try {
+    const body = {
+      image_request: {
+        prompt: prompt,
+        aspect_ratio: aspectRatio,
+        model: "V_2",
+        magic_prompt_option: "OFF",
+        num_images: numImages,
+        style_type: styleType
+      }
+    };
+    if (negPrompt) body.image_request.negative_prompt = negPrompt;
+
+    const response = await fetch('https://api.ideogram.ai/generate', {
+      method: 'POST',
+      headers: {
+        'Api-Key': apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || err.message || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const images = data.data || [];
+
+    if (images.length === 0) throw new Error('Зображення не повернулись від API.');
+
+    showStatus('success', `Готово! Згенеровано ${images.length} зображень.`);
+    renderResults(images, prompt);
+
+  } catch (err) {
+    showStatus('error', `Помилка: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderResults(images, prompt) {
+  const container = document.getElementById('results');
+  const aspectRatio = document.getElementById('aspectRatio').value;
+  const isPortrait = aspectRatio === 'ASPECT_9_16' || aspectRatio === 'ASPECT_2_3';
+  const isSquare = aspectRatio === 'ASPECT_1_1';
+  const cls = isPortrait ? 'portrait' : isSquare ? 'square' : '';
+
+  images.forEach((img, i) => {
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    card.innerHTML = `
+      <img class="result-img ${cls}" src="${img.url}" alt="Generated" loading="lazy">
+      <div class="result-footer">
+        <span class="result-label">Variant ${i + 1}</span>
+        <a class="dl-btn" href="${img.url}" download="drill-visual-${Date.now()}-${i}.jpg" target="_blank">Download</a>
+      </div>
+    `;
+    container.prepend(card);
+  });
+}
+
+function showStatus(type, msg) {
+  const el = document.getElementById('status');
+  el.className = `status ${type}`;
+  if (type === 'loading') {
+    el.innerHTML = `<div class="spinner"></div><span>${msg}</span>`;
+  } else {
+    el.textContent = msg;
+  }
+  el.style.display = type === 'loading' ? 'flex' : 'block';
+  if (type !== 'loading') setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+// Init
+setPreset(document.querySelector('.preset-btn.active'));
+</script>
+
+</body>
+</html>
